@@ -13,7 +13,7 @@ import {
 } from "@mantine/core";
 import { IconDotsVertical, IconEdit, IconTrash } from "@tabler/icons-react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ROLE_PERMISSIONS } from "@/features/auth/roles";
+import { roleOptions } from "@/features/auth/components/role-options";
 
 export type User = {
   id: string;
@@ -36,14 +36,6 @@ export const buildUsersColumns = ({
   onEdit,
   onDelete,
 }: BuildUsersColumnsProps): ColumnDef<User, unknown>[] => {
-  const roleOptions = Object.keys(ROLE_PERMISSIONS).map((role) => ({
-    value: role,
-    label: role
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" "),
-  }));
-
   return [
     {
       id: "name",

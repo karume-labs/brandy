@@ -1,23 +1,13 @@
 "use client";
 
-import {
-  Button,
-  Group,
-  Modal,
-  MultiSelect,
-  type MultiSelectProps,
-  PasswordInput,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-} from "@mantine/core";
+import { Button, Group, Modal, Stack, Title } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "mantine-form-zod-resolver";
+import { UserFormFields } from "@/features/auth/components/UserFormFields";
+import { UserPermissionsField } from "@/features/auth/components/UserPermissionsField";
 import type { User } from "@/features/auth/components/UsersColumns";
-import { PERMISSIONS, ROLE_PERMISSIONS } from "@/features/auth/roles";
+import { ROLE_PERMISSIONS } from "@/features/auth/roles";
 import {
   type CreateUserInput,
   createUserSchema,
@@ -28,7 +18,7 @@ import { BrandLogo } from "@/shared/components/BrandLogo";
 import { notify } from "@/shared/lib/notifications";
 import { orpcQuery } from "@/shared/lib/orpc-client";
 
-/** Form values are a union of create/update — password is always present (optional on edit). */
+/** Form values are a union of create/update — password optional on edit. */
 type FormValues = Omit<CreateUserInput, "password"> & { password?: string };
 
 interface UserFormModalProps {
@@ -51,7 +41,7 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
       permissions:
         user?.permissions || ROLE_PERMISSIONS[user?.role || "user"] || [],
     },
-    // On create, password is required; on edit it is optional (leave blank = keep).
+    // On create, password is required; on edit it is optional (blank = keep).
     validate: zodResolver(isEdit ? updateUserSchema : createUserSchema),
   });
 
@@ -71,39 +61,6 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
   });
 
   const isPending = isCreating || isUpdating;
-
-  const roleOptions = Object.keys(ROLE_PERMISSIONS).map((role) => ({
-    value: role,
-    label: role
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" "),
-  }));
-
-  const permissionOptions = PERMISSIONS.map((p) => ({
-    value: p.value,
-    label: p.label,
-  }));
-
-  const renderMultiSelectOption: MultiSelectProps["renderOption"] = ({
-    option,
-  }) => {
-    const description = PERMISSIONS.find(
-      (p) => p.value === option.value,
-    )?.description;
-    return (
-      <Group flex={1} gap="xs">
-        <div>
-          <Text size="sm">{option.label}</Text>
-          {description && (
-            <Text size="xs" opacity={0.5}>
-              {description}
-            </Text>
-          )}
-        </div>
-      </Group>
-    );
-  };
 
   const handleSubmit = async (values: FormValues) => {
     try {
@@ -133,51 +90,10 @@ export const UserFormModal: React.FC<UserFormModalProps> = ({
           </Title>
         </Stack>
         <Stack gap="md">
-          <TextInput
-            label="Name"
-            placeholder="John Doe"
-            required
-            data-autofocus
-            {...form.getInputProps("name")}
-          />
-          <TextInput
-            label="Email"
-            placeholder="john@example.com"
-            required
-            {...form.getInputProps("email")}
-          />
-          <PasswordInput
-            label="Password"
-            placeholder={isEdit ? "Leave blank to keep unchanged" : "••••••••"}
-            required={!isEdit}
-            {...form.getInputProps("password")}
-          />
-          <Select
-            label="Role"
-            description="Changing the role will reset custom permissions to defaults."
-            data={roleOptions}
-            required
-            {...form.getInputProps("role")}
-            onChange={(val) => {
-              const role = val as string;
-              form.setFieldValue("role", role);
-              form.setFieldValue("permissions", ROLE_PERMISSIONS[role] || []);
-            }}
-          />
-          <MultiSelect
-            label="Permissions"
-            description="Specific permissions granted to this user. Defaults are based on the selected role."
-            data={permissionOptions}
-            placeholder={
-              form.values.permissions?.length
-                ? "Search permissions..."
-                : "No permissions selected"
-            }
-            nothingFoundMessage="No permissions available"
-            renderOption={renderMultiSelectOption}
-            searchable
-            clearable
-            {...form.getInputProps("permissions")}
+          <UserFormFields form={form} isEdit={isEdit} />
+          <UserPermissionsField
+            value={form.values.permissions ?? []}
+            onChange={(value) => form.setFieldValue("permissions", value)}
           />
 
           <Group justify="flex-end" mt="md">
