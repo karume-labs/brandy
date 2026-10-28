@@ -1,8 +1,11 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import * as assetsBrandSchema from "@/features/assets/brand-schema";
 import * as assetsSchema from "@/features/assets/schema";
 import * as auditSchema from "@/features/audit/schema";
 import * as authSchema from "@/features/auth/schema";
+import * as brandSchema from "@/features/brand/schema";
+import * as workspaceSchema from "@/features/workspace/schema";
 import { env } from "@/shared/env.server";
 
 /** Bounded pool so a traffic spike can't open unbounded connections. */
@@ -28,5 +31,8 @@ export const db = drizzle(pool, {
     ...authSchema,
     ...auditSchema,
     ...assetsSchema,
+    ...assetsBrandSchema,
+    ...brandSchema,
+    ...workspaceSchema,
   },
 });

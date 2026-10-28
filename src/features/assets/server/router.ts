@@ -1,165 +1,84 @@
 import { ORPCError } from "@orpc/server";
-import { and, count, desc, eq, or, sql } from "drizzle-orm";
-import { requireAdmin } from "@/features/admin/server/require-admin";
-import { assets } from "@/features/assets/schema";
-import { deleteAssetFile } from "@/features/assets/server/storage";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { assetVersions, brandAssets } from "@/features/assets/brand-schema";
 import {
-  deleteAssetSchema,
-  listAssetsSchema,
-  publicListAssetsSchema,
-  updateAssetSchema,
-} from "@/features/assets/validators";
-import { recordAudit } from "@/features/audit/server/record";
+  requireBrandAdmin,
+  uploadedFileSchema,
+} from "@/features/assets/server/brand-asset-guards";
+import { ingestLogoSheet } from "@/features/assets/server/ingest";
+import { listBrandAssets } from "@/features/assets/server/versions";
+import { brands } from "@/features/brand/schema";
+import { requireWorkspaceRole } from "@/features/workspace/server/gate";
 import { osServer } from "@/orpc/server";
 import { db } from "@/shared/lib/db";
-import { offsetForPage } from "@/shared/validators";
 
-/** Search across name/description. */
-const searchFilter = (q?: string) => {
-  if (!q) return undefined;
-  const pattern = `%${q}%`;
-  return or(
-    sql`${assets.name} ILIKE ${pattern}`,
-    sql`${assets.description} ILIKE ${pattern}`,
-  );
-};
-
-export const assetsRouter = osServer.router({
-  /**
-   * Admin list: every asset, newest first, paginated. Gated by requireAdmin.
-   */
-  list: osServer
+export const brandAssetsRouter = osServer.router({
+  /** All assets (sheet + variants) for a brand, active version included. */
+  listByBrand: osServer
     .route({})
-    .input(listAssetsSchema)
+    .input(z.object({ brandId: z.string().uuid() }))
     .handler(async ({ input, context }) => {
-      await requireAdmin(context.headers);
-
-      const where = and(
-        searchFilter(input.q),
-        input.category ? eq(assets.category, input.category) : undefined,
-      );
-      const offset = offsetForPage(input.page, input.pageSize);
-
-      const [items, totalRows] = await Promise.all([
-        db
-          .select()
-          .from(assets)
-          .where(where)
-          .orderBy(desc(assets.createdAt))
-          .limit(input.pageSize)
-          .offset(offset),
-        db.select({ total: count() }).from(assets).where(where),
-      ]);
-
-      return { items, total: totalRows[0]?.total ?? 0 };
+      const brand = await db.query.brands.findFirst({
+        where: eq(brands.id, input.brandId),
+      });
+      if (!brand) {
+        throw new ORPCError("NOT_FOUND", { message: "Brand not found" });
+      }
+      await requireWorkspaceRole(context.headers, brand.workspaceId);
+      return await listBrandAssets(input.brandId);
     }),
 
   /**
-   * PUBLIC procedure - no session required. Only assets flagged `isPublic`
-   * are returned; this powers the unauthenticated /assets page.
+   * Active version metadata (rules, size, transparency). The bytes are
+   * served by /api/brand-assets/[id]/file, which enforces visibility.
    */
-  publicList: osServer
+  getActiveVersion: osServer
     .route({})
-    .input(publicListAssetsSchema)
-    .handler(async ({ input }) => {
-      const where = and(eq(assets.isPublic, true), searchFilter(input.q));
-      const offset = offsetForPage(input.page, input.pageSize);
-
-      const [items, totalRows] = await Promise.all([
-        db
-          .select({
-            id: assets.id,
-            name: assets.name,
-            description: assets.description,
-            category: assets.category,
-            fileName: assets.fileName,
-            mimeType: assets.mimeType,
-            fileSize: assets.fileSize,
-            createdAt: assets.createdAt,
-          })
-          .from(assets)
-          .where(where)
-          .orderBy(desc(assets.createdAt))
-          .limit(input.pageSize)
-          .offset(offset),
-        db.select({ total: count() }).from(assets).where(where),
-      ]);
-
-      return { items, total: totalRows[0]?.total ?? 0 };
-    }),
-
-  /** Flip an asset between public and private. */
-  setVisibility: osServer
-    .route({})
-    .input(updateAssetSchema.pick({ id: true, isPublic: true }))
+    .input(z.object({ assetId: z.string().uuid() }))
     .handler(async ({ input, context }) => {
-      const sessionUser = await requireAdmin(context.headers);
-
-      const [before] = await db
-        .select()
-        .from(assets)
-        .where(eq(assets.id, input.id));
-      if (!before) {
+      const asset = await db.query.brandAssets.findFirst({
+        where: eq(brandAssets.id, input.assetId),
+      });
+      if (!asset) {
         throw new ORPCError("NOT_FOUND", { message: "Asset not found" });
       }
+      const brand = await db.query.brands.findFirst({
+        where: eq(brands.id, asset.brandId),
+      });
+      if (!brand) {
+        throw new ORPCError("NOT_FOUND", { message: "Brand not found" });
+      }
+      await requireWorkspaceRole(context.headers, brand.workspaceId);
 
-      const [updated] = await db
-        .update(assets)
-        .set({ isPublic: input.isPublic ?? false })
-        .where(eq(assets.id, input.id))
-        .returning();
+      if (!asset.currentVersionId) return null;
+      return await db.query.assetVersions.findFirst({
+        where: eq(assetVersions.id, asset.currentVersionId),
+      });
+    }),
 
-      await recordAudit(
-        {
-          action: "update",
-          entityType: "asset",
-          entityId: before.id,
-          entityLabel: before.name,
-          summary: `Made “${before.name}” ${input.isPublic ? "public" : "private"}`,
-        },
-        sessionUser,
+  /** Drop a master sheet -> segmented, background-stripped variant set. */
+  ingestSheet: osServer
+    .route({})
+    .input(z.object({ brandId: z.string().uuid(), file: uploadedFileSchema }))
+    .handler(async ({ input, context }) => {
+      const brand = await requireBrandAdmin(context.headers, input.brandId);
+      const sessionUser = await requireWorkspaceRole(
+        context.headers,
+        brand.workspaceId,
+        "admin",
       );
-
-      return updated;
-    }),
-
-  /** Deletes the DB row and the file on disk (row first, then storage). */
-  delete: osServer
-    .route({})
-    .input(deleteAssetSchema)
-    .handler(async ({ input, context }) => {
-      const sessionUser = await requireAdmin(context.headers);
-
-      const [deleted] = await db
-        .delete(assets)
-        .where(eq(assets.id, input.id))
-        .returning();
-
-      if (!deleted) {
-        throw new ORPCError("NOT_FOUND", { message: "Asset not found" });
-      }
 
       try {
-        await deleteAssetFile(deleted.filePath);
+        return await ingestLogoSheet({
+          brandId: brand.id,
+          file: input.file,
+          userId: sessionUser.id,
+        });
       } catch (error) {
-        // The row is the source of truth - log and continue.
-        console.error(
-          `[assets] Failed to delete file ${deleted.filePath}:`,
-          error,
-        );
+        throw new ORPCError("BAD_REQUEST", {
+          message: error instanceof Error ? error.message : "Ingestion failed",
+        });
       }
-
-      await recordAudit(
-        {
-          action: "delete",
-          entityType: "asset",
-          entityId: deleted.id,
-          entityLabel: deleted.name,
-          summary: `Deleted asset ${deleted.name}`,
-        },
-        sessionUser,
-      );
-
-      return deleted;
     }),
 });
