@@ -9,6 +9,7 @@
     "lint": "biome check",
     "format": "biome format --write",
     "typecheck": "tsc --noEmit",
+    "guard": "bun scripts/guard.mjs",
     "db:generate": "drizzle-kit generate",
     "db:generate-auth": "bunx @better-auth/cli@latest generate --output src/features/auth/schema.ts --config src/features/auth/server/better-auth.ts --yes",
     "db:push": "drizzle-kit push",
