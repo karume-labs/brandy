@@ -10,6 +10,38 @@ const MIME_BY_EXT: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".svg": "image/svg+xml",
+  ".pdf": "application/pdf",
+};
+
+/** Display name for a stored file: "husplus-brand-guide.pdf" -> "Husplus Brand Guide". */
+export const displayName = (entry: string): string => {
+  const base = entry.replace(/\.[^.]+$/, "");
+  return titleize(slugify(base));
+};
+
+/**
+ * Finds the guide PDF belonging to a brand, resolving guide slugs that only
+ * prefix the brand slug (townlink-brand-guide.pdf -> townlink-limited brand).
+ * Returns the exact filename to ingest, or null when the brand has no guide.
+ */
+export const guideForBrand = (
+  entries: string[],
+  slug: string,
+): string | null => {
+  const direct = entries.find((entry) =>
+    new RegExp(`^${slug}-brand-guide\\.`, "i").test(entry),
+  );
+  if (direct) return direct;
+
+  const prefixed = entries.find((entry) => {
+    const guideSlug = brandSlug(entry);
+    return (
+      /-brand-guide\./i.test(entry) &&
+      guideSlug !== null &&
+      slug.startsWith(`${guideSlug}-`)
+    );
+  });
+  return prefixed ?? null;
 };
 
 export const slugify = (value: string): string =>

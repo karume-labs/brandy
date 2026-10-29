@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import {
   assetVersions,
   brandAssets,
+  DEFAULT_VARIANT_RULES,
   type VariantRules,
 } from "@/features/assets/brand-schema";
 import { imageInfo } from "@/features/assets/server/images";
@@ -78,6 +79,47 @@ export const insertVersion = async (
     })
     .returning();
   if (!row) throw new Error("Could not persist asset version");
+  return row;
+};
+
+/** Persists a non-image file (brand guide, PDF) as an immutable version. */
+export const insertDocumentVersion = async (
+  assetId: string,
+  version: number,
+  params: {
+    buffer: Buffer;
+    fileName: string;
+    mimeType: string;
+    extension: string;
+    notes?: string | null;
+    userId?: string | null;
+  },
+) => {
+  const key = safeKey(
+    "brand-assets",
+    assetId,
+    `v${version}-${Date.now()}${params.extension}`,
+  );
+  const stored = await storage.put(key, params.buffer, params.mimeType);
+
+  const [row] = await db
+    .insert(assetVersions)
+    .values({
+      assetId,
+      version,
+      filePath: stored.key,
+      fileName: params.fileName,
+      mimeType: params.mimeType,
+      fileSize: stored.size,
+      width: null,
+      height: null,
+      isTransparent: false,
+      rules: DEFAULT_VARIANT_RULES,
+      notes: params.notes ?? null,
+      createdBy: params.userId ?? null,
+    })
+    .returning();
+  if (!row) throw new Error("Could not persist document version");
   return row;
 };
 

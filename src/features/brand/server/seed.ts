@@ -1,14 +1,12 @@
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readdir } from "node:fs/promises";
 import { eq } from "drizzle-orm";
 import { brandPrompts, brands } from "@/features/brand/schema";
 import {
   BRANDING_DIR,
-  fileAsUpload,
-  mimeFor,
   targetSlugs,
   titleize,
 } from "@/features/brand/server/seed-files";
+import { ingestGuide, ingestSheet } from "@/features/brand/server/seed-ingest";
 import { workspaceMembers, workspaces } from "@/features/workspace/schema";
 import { db } from "@/shared/lib/db";
 
@@ -51,44 +49,6 @@ const ensureWorkspace = async (userId: string | null) => {
   return workspace;
 };
 
-/** Runs one brand's master sheet through segmentation + palette distillation. */
-const ingestSheet = async (
-  brandId: string,
-  entries: string[],
-  slug: string,
-  userId: string | null,
-) => {
-  const sheet = entries.find((entry) =>
-    new RegExp(`^${slug}-logo-sheet\\.`, "i").test(entry),
-  );
-  if (!sheet) return;
-  if (!userId) {
-    console.log(`  No seed user; not ingesting ${sheet}.`);
-    return;
-  }
-
-  const alreadyIngested = await db.query.brandAssets.findFirst({
-    where: (table, { and, eq }) =>
-      and(eq(table.brandId, brandId), eq(table.kind, "logo_sheet")),
-  });
-  if (alreadyIngested) return;
-
-  try {
-    const buffer = await readFile(join(BRANDING_DIR, sheet));
-    const { ingestLogoSheet } = await import("@/features/assets/server/ingest");
-    const summary = await ingestLogoSheet({
-      brandId,
-      file: fileAsUpload(buffer, sheet, mimeFor(sheet)),
-      userId,
-    });
-    console.log(
-      `  Ingested ${sheet}: ${summary.variantCount} variants, ${summary.colorsSaved} colors.`,
-    );
-  } catch (error) {
-    console.error(`  Skipped ${sheet}:`, error);
-  }
-};
-
 const seedBrand = async (
   workspaceId: string,
   slug: string,
@@ -99,8 +59,9 @@ const seedBrand = async (
     where: eq(brands.slug, slug),
   });
   if (existing) {
-    // Recover from a partial run: brand exists but its sheet never landed.
+    // Recover from a partial run: brand exists but its sheet/guide never landed.
     await ingestSheet(existing.id, entries, slug, userId);
+    await ingestGuide(existing.id, entries, slug, userId);
     return;
   }
 
@@ -119,6 +80,7 @@ const seedBrand = async (
   }
 
   await ingestSheet(brand.id, entries, slug, userId);
+  await ingestGuide(brand.id, entries, slug, userId);
 };
 
 /**
