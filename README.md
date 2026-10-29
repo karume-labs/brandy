@@ -73,13 +73,13 @@ bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000). Unauthenticated visitors
-are redirected to `/sign-in`.
+are redirected to `/admin/sign-in`.
 
 ### The public asset library
 
 `/` (with `/assets` as an alias) is a **public** page - it requires no login
 and is meant for sharing downloads (logos, fonts, brand kits) with people
-outside the platform. Everything under `/dashboard` stays behind the session
+outside the platform. Everything under `/admin` stays behind the session
 gate.
 
 ## Project Structure

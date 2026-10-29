@@ -67,7 +67,7 @@ export const ForgotPasswordForm = () => {
                 Use a different email
               </Button>
               <Text size="sm" ta="center">
-                <Anchor component={Link} href="/sign-in" inherit>
+                <Anchor component={Link} href="/admin/sign-in" inherit>
                   Back to sign in
                 </Anchor>
               </Text>
@@ -103,7 +103,7 @@ export const ForgotPasswordForm = () => {
                 Send reset link
               </Button>
               <Text size="sm" ta="center">
-                <Anchor component={Link} href="/sign-in" inherit>
+                <Anchor component={Link} href="/admin/sign-in" inherit>
                   Back to sign in
                 </Anchor>
               </Text>

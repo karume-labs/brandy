@@ -29,7 +29,7 @@ export const DashboardView = () => {
           description: "Registered accounts",
           icon: IconUsers,
           color: "oak",
-          href: "/dashboard/users",
+          href: "/admin/users",
         },
         {
           label: "Assets",
@@ -37,7 +37,7 @@ export const DashboardView = () => {
           description: "Branding assets",
           icon: IconPalette,
           color: "amber",
-          href: "/dashboard/assets",
+          href: "/admin/assets",
         },
         {
           label: "Public",

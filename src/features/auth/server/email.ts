@@ -2,7 +2,7 @@ import { env } from "@/shared/env.server";
 
 interface ResetPasswordEmailInput {
   user: { name?: string | null; email: string };
-  /** Absolute URL that validates the token and redirects to /reset-password */
+  /** Absolute URL that validates the token and redirects to /admin/reset-password */
   url: string;
 }
 

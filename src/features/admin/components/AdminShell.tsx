@@ -42,7 +42,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
 
   useEffect(() => {
     if (!isPending && !session) {
-      router.push("/sign-in");
+      router.push("/admin/sign-in");
     }
   }, [session, isPending, router]);
 
@@ -52,7 +52,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({ children }) => {
     setIsSigningOut(true);
     try {
       await authClient.signOut();
-      router.push("/sign-in");
+      router.push("/admin/sign-in");
       router.refresh();
     } catch (error: unknown) {
       notify.error(

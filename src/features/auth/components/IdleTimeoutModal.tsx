@@ -59,7 +59,7 @@ export const IdleTimeoutModal = () => {
   const onIdle = async () => {
     setOpen(false);
     await authClient.signOut();
-    router.push("/sign-in");
+    router.push("/admin/sign-in");
   };
 
   const onActive = () => {
@@ -101,7 +101,7 @@ export const IdleTimeoutModal = () => {
   const handleSignOut = async () => {
     setOpen(false);
     await authClient.signOut();
-    router.push("/sign-in");
+    router.push("/admin/sign-in");
   };
 
   const progressValue =

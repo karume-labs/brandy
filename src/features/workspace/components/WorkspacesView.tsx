@@ -59,7 +59,7 @@ export const WorkspacesView = () => {
             padding="lg"
             radius="md"
             component={Link}
-            href="/dashboard/brands"
+            href="/admin/brands"
             onClick={() => setActiveWorkspaceId(workspace.id)}
           >
             <Stack gap="xs">

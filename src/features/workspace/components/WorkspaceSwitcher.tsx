@@ -72,7 +72,7 @@ export const WorkspaceSwitcher = () => {
           );
         })}
         <MenuDivider />
-        <MenuItem component={Link} href="/dashboard/workspaces">
+        <MenuItem component={Link} href="/admin/workspaces">
           Manage workspaces
         </MenuItem>
       </MenuDropdown>

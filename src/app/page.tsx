@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 
 /**
  * The landing page is the public asset library - no sign-in needed. The
- * admin dashboard lives at /dashboard behind the session gate (unauthenticated
- * visitors are bounced to /sign-in).
+ * admin dashboard lives at /admin behind the session gate (unauthenticated
+ * visitors are bounced to /admin/sign-in).
  */
 const Home = () => (
   // Suspense: PublicAssetsPage reads URL search params (nuqs) for paging.

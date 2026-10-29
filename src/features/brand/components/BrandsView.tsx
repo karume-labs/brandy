@@ -71,7 +71,7 @@ export const BrandsView = () => {
             padding="lg"
             radius="md"
             component={Link}
-            href={`/dashboard/brands/${brand.id}`}
+            href={`/admin/brands/${brand.id}`}
           >
             <Stack gap="xs">
               <Group justify="space-between">

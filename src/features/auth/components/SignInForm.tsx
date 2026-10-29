@@ -35,7 +35,7 @@ export const SignInForm = () => {
     signIn(values, {
       onSuccess: () => {
         notify.success("Signed in", "Welcome back!");
-        router.push("/dashboard");
+        router.push("/admin");
       },
       onError: (err) => {
         notify.error("Sign in failed", err.message);
@@ -71,7 +71,7 @@ export const SignInForm = () => {
                     </span>
                     <Anchor
                       component={Link}
-                      href="/forgot-password"
+                      href="/admin/forgot-password"
                       size="xs"
                       underline="hover"
                     >

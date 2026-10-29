@@ -37,7 +37,7 @@ export const ResetDoneState = () => {
               Your password has been changed successfully. You can now sign in
               with your new password.
             </Text>
-            <Button fullWidth onClick={() => router.push("/sign-in")}>
+            <Button fullWidth onClick={() => router.push("/admin/sign-in")}>
               Sign in
             </Button>
           </Stack>
@@ -73,11 +73,11 @@ export const ResetLinkErrorState = ({
                 ? "This reset link is invalid or has expired. Reset links can only be used once and expire after 15 minutes."
                 : "This reset link is invalid or incomplete. Please request a new one to continue."}
             </Alert>
-            <Button fullWidth component={Link} href="/forgot-password">
+            <Button fullWidth component={Link} href="/admin/forgot-password">
               Request a new link
             </Button>
             <Text size="sm" ta="center">
-              <Anchor component={Link} href="/sign-in" inherit>
+              <Anchor component={Link} href="/admin/sign-in" inherit>
                 Back to sign in
               </Anchor>
             </Text>

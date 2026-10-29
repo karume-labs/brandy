@@ -28,7 +28,7 @@ export const useForgotPassword = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: input.email,
-          redirectTo: `${env.NEXT_PUBLIC_API_URL}/reset-password`,
+          redirectTo: `${env.NEXT_PUBLIC_API_URL}/admin/reset-password`,
         }),
       });
 

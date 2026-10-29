@@ -15,16 +15,16 @@ import { NavbarLink } from "@/features/admin/components/NavbarLink";
 
 /** Sidebar entries for the admin dashboard. */
 const NAV_LINKS = [
-  { label: "Dashboard", to: "/dashboard", icon: IconLayoutDashboard },
-  { label: "Brands", to: "/dashboard/brands", icon: IconPalette },
-  { label: "Assets", to: "/dashboard/assets", icon: IconPhoto },
+  { label: "Dashboard", to: "/admin", icon: IconLayoutDashboard },
+  { label: "Brands", to: "/admin/brands", icon: IconPalette },
+  { label: "Assets", to: "/admin/assets", icon: IconPhoto },
   {
     label: "Workspaces",
-    to: "/dashboard/workspaces",
+    to: "/admin/workspaces",
     icon: IconBuildingWarehouse,
   },
-  { label: "Users", to: "/dashboard/users", icon: IconUsers },
-  { label: "Audit Log", to: "/dashboard/audit", icon: IconHistory },
+  { label: "Users", to: "/admin/users", icon: IconUsers },
+  { label: "Audit Log", to: "/admin/audit", icon: IconHistory },
 ];
 
 interface AdminNavbarProps {
@@ -34,7 +34,7 @@ interface AdminNavbarProps {
 }
 
 const isActivePath = (pathname: string, to: string): boolean =>
-  pathname === to || (to !== "/dashboard" && pathname.startsWith(to));
+  pathname === to || (to !== "/admin" && pathname.startsWith(to));
 
 export const AdminNavbar: React.FC<AdminNavbarProps> = ({
   isExpanded,

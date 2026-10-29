@@ -49,7 +49,7 @@ export const RecentActivityCard: React.FC<RecentActivityCardProps> = ({
         </Group>
         <Badge
           component={Link}
-          href="/dashboard/audit"
+          href="/admin/audit"
           variant="light"
           color="amber"
           styles={{ root: { textDecoration: "none" } }}

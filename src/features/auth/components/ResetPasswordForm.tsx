@@ -90,7 +90,7 @@ export const ResetPasswordForm = () => {
                 Reset password
               </Button>
               <Text size="sm" ta="center">
-                <Anchor component={Link} href="/forgot-password" inherit>
+                <Anchor component={Link} href="/admin/forgot-password" inherit>
                   Send a new link instead
                 </Anchor>
               </Text>
