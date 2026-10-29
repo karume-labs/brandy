@@ -6,7 +6,11 @@ import {
   targetSlugs,
   titleize,
 } from "@/features/brand/server/seed-files";
-import { ingestGuide, ingestSheet } from "@/features/brand/server/seed-ingest";
+import {
+  ingestGuide,
+  ingestSheet,
+  publishSeededAssets,
+} from "@/features/brand/server/seed-ingest";
 import { workspaceMembers, workspaces } from "@/features/workspace/schema";
 import { db } from "@/shared/lib/db";
 
@@ -101,4 +105,5 @@ export const seedBrands = async (userId: string | null): Promise<void> => {
   for (const slug of slugs) {
     await seedBrand(workspace.id, slug, entries, userId);
   }
+  await publishSeededAssets(slugs);
 };

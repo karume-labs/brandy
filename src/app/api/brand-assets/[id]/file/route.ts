@@ -7,8 +7,10 @@ import { db } from "@/shared/lib/db";
 import { storage } from "@/shared/lib/storage";
 
 /**
- * Streams the active version of a brand asset. Workspace members only -
- * brand assets stay internal until published to the public library.
+ * Streams the active version of a brand asset. Versions flagged `isPublic`
+ * are served to anyone - this is what powers the public library at / with no
+ * sign-in. Everything else requires a workspace session; files live outside
+ * public/, so this route is the only way in.
  */
 export const GET = async (
   request: Request,
@@ -23,37 +25,39 @@ export const GET = async (
     return new Response("Not Found", { status: 404 });
   }
 
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session?.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const brand = await db.query.brands.findFirst({
-    where: eq(brands.id, asset.brandId),
-  });
-  if (!brand) {
-    return new Response("Not Found", { status: 404 });
-  }
-
-  const membership =
-    session.user.role === "super admin"
-      ? { userId: session.user.id } // super admins bypass membership
-      : await db.query.workspaceMembers.findFirst({
-          where: and(
-            eq(workspaceMembers.workspaceId, brand.workspaceId),
-            eq(workspaceMembers.userId, session.user.id),
-          ),
-        });
-
-  if (!membership) {
-    return new Response("Forbidden", { status: 403 });
-  }
-
   const version = await db.query.assetVersions.findFirst({
     where: eq(assetVersions.id, asset.currentVersionId),
   });
   if (!version) {
     return new Response("Not Found", { status: 404 });
+  }
+
+  if (!version.isPublic) {
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session?.user) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const brand = await db.query.brands.findFirst({
+      where: eq(brands.id, asset.brandId),
+    });
+    if (!brand) {
+      return new Response("Not Found", { status: 404 });
+    }
+
+    const membership =
+      session.user.role === "super admin"
+        ? { userId: session.user.id } // super admins bypass membership
+        : await db.query.workspaceMembers.findFirst({
+            where: and(
+              eq(workspaceMembers.workspaceId, brand.workspaceId),
+              eq(workspaceMembers.userId, session.user.id),
+            ),
+          });
+
+    if (!membership) {
+      return new Response("Forbidden", { status: 403 });
+    }
   }
 
   try {

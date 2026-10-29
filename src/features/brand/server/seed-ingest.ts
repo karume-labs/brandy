@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { inArray } from "drizzle-orm";
+import { assetVersions, brandAssets } from "@/features/assets/brand-schema";
+import { brands } from "@/features/brand/schema";
 import {
   BRANDING_DIR,
   displayName,
@@ -83,4 +86,46 @@ export const ingestGuide = async (
   } catch (error) {
     console.error(`  Skipped ${guide}:`, error);
   }
+};
+
+/**
+ * Publishes every version of the seeded brands' assets to the public library
+ * (`isPublic`) so the unauthenticated page at / serves them. Runs on every
+ * seed: files dropped into the branding folder later go public on the next
+ * seed, while admin uploads outside the seed keep the private default.
+ */
+export const publishSeededAssets = async (slugs: string[]): Promise<void> => {
+  if (slugs.length === 0) return;
+
+  const owned = await db
+    .select({ id: brands.id })
+    .from(brands)
+    .where(inArray(brands.slug, slugs));
+  if (owned.length === 0) return;
+
+  const seeded = await db
+    .select({ id: brandAssets.id })
+    .from(brandAssets)
+    .where(
+      inArray(
+        brandAssets.brandId,
+        owned.map((brand) => brand.id),
+      ),
+    );
+  if (seeded.length === 0) return;
+
+  const published = await db
+    .update(assetVersions)
+    .set({ isPublic: true })
+    .where(
+      inArray(
+        assetVersions.assetId,
+        seeded.map((asset) => asset.id),
+      ),
+    )
+    .returning({ id: assetVersions.id });
+
+  console.log(
+    `  Published ${published.length} asset version(s) to the public library.`,
+  );
 };

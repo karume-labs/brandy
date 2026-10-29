@@ -1,45 +1,51 @@
-import { and, count, desc, eq } from "drizzle-orm";
-import { assets } from "@/features/assets/schema";
+import { and, desc, eq, type SQL } from "drizzle-orm";
+import { assetVersions, brandAssets } from "@/features/assets/brand-schema";
 import {
+  assetLabel,
+  libraryCount,
+  libraryRows,
   publicListAssetsSchema,
   searchFilter,
 } from "@/features/assets/server/library-common";
 import { osServer } from "@/orpc/server";
-import { db } from "@/shared/lib/db";
 import { offsetForPage } from "@/shared/validators";
+
+const publicWhere = (q?: string): SQL<unknown> | undefined =>
+  and(eq(assetVersions.isPublic, true), searchFilter(q));
 
 export const publicLibraryRouter = osServer.router({
   /**
-   * PUBLIC procedure - no session required. Only assets flagged `isPublic`
-   * are returned; this powers the unauthenticated asset library at /.
+   * PUBLIC procedure - no session required. Sources the unauthenticated
+   * library at /: brand assets whose ACTIVE version is flagged `isPublic`,
+   * so anyone can browse and download without an account.
    */
   publicList: osServer
     .route({})
     .input(publicListAssetsSchema)
     .handler(async ({ input }) => {
-      const where = and(eq(assets.isPublic, true), searchFilter(input.q));
+      const where = publicWhere(input.q);
       const offset = offsetForPage(input.page, input.pageSize);
 
       const [items, totalRows] = await Promise.all([
-        db
-          .select({
-            id: assets.id,
-            name: assets.name,
-            description: assets.description,
-            category: assets.category,
-            fileName: assets.fileName,
-            mimeType: assets.mimeType,
-            fileSize: assets.fileSize,
-            createdAt: assets.createdAt,
-          })
-          .from(assets)
+        libraryRows()
           .where(where)
-          .orderBy(desc(assets.createdAt))
+          .orderBy(desc(brandAssets.createdAt))
           .limit(input.pageSize)
           .offset(offset),
-        db.select({ total: count() }).from(assets).where(where),
+        libraryCount(where),
       ]);
 
-      return { items, total: totalRows[0]?.total ?? 0 };
+      return {
+        items: items.map((row) => ({
+          id: row.id,
+          name: assetLabel(row.brandName, row.name),
+          category: row.category,
+          fileName: row.fileName,
+          mimeType: row.mimeType,
+          fileSize: row.fileSize,
+          createdAt: row.createdAt,
+        })),
+        total: totalRows[0]?.total ?? 0,
+      };
     }),
 });
